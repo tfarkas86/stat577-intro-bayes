@@ -1,0 +1,84 @@
+---
+title: "R Notebook"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r}
+library(tidyverse)
+library(lme4)
+```
+
+```{r}
+bd_raw <- read_csv("../data/bcarotene.csv", 
+                   col_types = cols(ptid = col_factor())) 
+
+bd_means <- bd_raw %>%
+  group_by(ptid) %>%
+  summarize(bc_mean = mean(bcarot, na.rm=TRUE),
+            ve_mean = mean(vite, na.rm=TRUE))
+
+bc_mean <- mean(bd_raw %>% filter(month > 3) %>% pull(bcarot), na.rm=TRUE)
+ve_mean <- mean(bd_raw %>% filter(month > 3) %>% pull(vite), na.rm=TRUE)
+cauc_mean <- mean(bd_raw %>% filter(month > 3) %>% pull(cauc), na.rm=TRUE)
+vauc_mean <- mean(bd_raw %>% filter(month > 3) %>% pull(vauc), na.rm=TRUE)
+
+bd <- bd_raw %>%
+  mutate(bcarot_i = ifelse(is.na(bcarot), bc_mean, bcarot),
+         vite_i = ifelse(is.na(vite), ve_mean, vite),
+         cauc_i = ifelse(is.na(cauc), cauc_mean, cauc),
+         vauc_i = ifelse(is.na(vauc), vauc_mean, vauc),
+         bc_s = as.vector(scale(bcarot_i)),
+         ve_s = as.vector(scale(vite_i)), 
+         dose_s = as.vector(scale(dose)), 
+         age_s = as.vector(scale(age)),
+         male_s = ifelse(male == 0, -.5, .5), 
+         bmi_s = as.vector(scale(bmi)), 
+         chol_s = as.vector(scale(chol)), 
+         cauc_s = as.vector(scale(cauc_i)),
+         vauc_s = as.vector(scale(vauc_i))
+         ) %>%
+  inner_join(bd_raw %>%
+               filter(month == 15) %>%
+               select(ptid))
+  
+```
+
+```{r}
+bd %>%
+  #group_by(month) %>%
+  #summarize(bc = mean(bcarot)) %>%
+  ggplot() +
+  geom_line(aes(x=month, y=bcarot, color=ptid))
+
+bd %>% 
+  filter(month == 15)
+```
+From this graph we see a huge difference in variance among individuals, and it appears to depend not in the individual, but on the treatment level (see low variance for dose == 0).
+
+Should we test whether the patients have equal means, whether $\mu_{ptid}$ are equal ($\sigma^2_{\mu} = 0$)?
+
+```{r}
+m1 <- lm(bcarot ~ dose + age + male + bmi + chol, 
+         dat = bd,
+         subset=month==4)
+summary(m1)
+```
+
+```{r}
+m2 <- lmer(bc_s ~ dose_s * month + (1 | ptid), 
+         dat = bd, subset = month > 3 & month < 7)
+
+summary(m2)
+
+```
+
+```{r}
+anova(lm(bc_s ~ ptid, data=bd, subset=month > 3 & month < 7))
+
+VarCorr(m2)
+```
+
+
+

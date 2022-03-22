@@ -1,0 +1,24 @@
+model{
+	for(i in 1:n){
+		bc_s[i] ~ dnorm( mu[i] , tau_bc )
+		mu[i] <- beta0 + 
+		         beta1 * ve_s[i] + 
+		         gamma[ ptid[i] ]
+	}
+	
+	for(j in 1:n_patients){
+		gamma[j] ~ dnorm( 0, tau_g )
+	}
+
+		beta0 ~ dnorm( 0, tau_b0 )
+		beta1 ~ dnorm( 0, tau_b1 )
+		
+	
+	tau_bc ~ dgamma(0.001, 0.001)
+	tau_g ~ dgamma(0.001, 0.001)
+	tau_b0 ~ dgamma(0.001, 0.001)
+	tau_b1 ~ dgamma(0.001, 0.001)
+
+	sigma_bc <- pow(tau_bc,-0.5)
+	sigma_g <- pow(tau_g,-0.5)
+}

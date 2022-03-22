@@ -1,0 +1,461 @@
+---
+title: "STAT577 Homework 2"
+author: "Tim Farkas"
+date: "3/19/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load Packages
+```{r Packages, message=FALSE}
+library(tidyverse)
+library(rjags)
+library(R2jags)
+library(kableExtra)
+```
+
+### Problem 1
+
+##### Create Gamma-Buster
+```{r gammabustr}
+
+gammabustr <- function(mode, pct=0.95, target, 
+                       beta_upper=100, plot=FALSE) {
+  
+  #### helper functions ####
+  
+  # function to find alpha given beta and mode
+  find_alpha <- function(beta, mode) mode * beta + 1
+  
+  # function to get difference from boundary target
+  diff_pct <- function(beta, mode, prop, target) {
+    
+      # function to get theta given percentile
+      get_pct <- function(beta, mode, prop) {
+        
+        alpha <- find_alpha(beta=beta, mode=mode)
+        percentile <- qgamma(prop, rate=beta, shape=alpha)
+        return(percentile)
+    
+      }
+    
+    abs(get_pct(beta=beta, mode=mode, prop=prop) - target)
+    
+  }
+  
+  #### main function body ####
+  par <- optim(par=1, fn=diff_pct, method="Brent", mode=mode, 
+               prop=pct, target=target, lower=0, upper=beta_upper)$par
+  
+  parms <- c(alpha=find_alpha(beta=par, mode=mode), beta=par)
+  
+  #### plot ####
+  
+  # plot theoretical distribution given parameters
+  if(plot) {
+    
+    gammas <- seq(qgamma(.0001, parms["alpha"], parms["beta"]),
+                  qgamma(.9999, parms["alpha"], parms["beta"]),
+                  length.out=10000)
+    
+    sims <- tibble(sims=dgamma(gammas, parms["alpha"], parms["beta"]))
+    
+    print(ggplot(data=sims, aes(x=gammas, y=sims)) + 
+            geom_line() + 
+            xlab("theta"))
+    
+  }
+  
+  #### return ####
+  return(parms)
+  
+}
+
+```
+
+1a. A prior given Dr. McMillan's beliefs would be Gamma(2.31, 2.63). 
+```{r}
+gammabustr(.5, target=2, plot=TRUE)
+```
+
+1b. The conjugate posterior is Gamma($\sum{x_i} + \alpha$, $n + \beta$). With 38 hunters catching 10 armadillos, that yields a posterior for the kill rate of Gamma(12.31, 40.63).
+
+1c. The expected value of a Gamma(12.31, 40.63) is $\frac{\alpha}{\beta} = \frac{12.31}{40.63} = 0.303$.
+
+1d. There is a 95% probability that the kill rate lies between 0.156 and 0.493 armadillos per day. With 38 hunters, that equates to an estimate of between 6 and 18 armadillos.
+
+```{r}
+sims <- rgamma(100000, 12.06, 40.12)
+up_low <- quantile(sims, c(0.025, 0.975)) 
+up_low * 38
+```  
+
+### Bullet 2  
+
+```{r JAGS model, error=TRUE, eval=FALSE}
+sink("~/Dropbox/stat577/homework/hw_code/example_3.1.3.txt")
+
+cat("
+model{
+      
+  # likelihood distributions
+  y1 ~ dbin(t1, 80)
+  y2 ~ dbin(t2, 100)
+  
+  # prior distributions
+  t1 ~ dbeta(1, 1)
+  t2 ~ dbeta(2, 1)
+  
+}", fill=TRUE)
+
+sink()
+```
+
+```{r run model, message=FALSE, results=FALSE}
+params <- c("t1", "t2")
+
+inits <- function() {
+  list(
+    t1 = rbeta(1, 1, 1), 
+    t2 = rbeta(1, 2, 1)
+  )
+}
+
+jags_data <- list(y1 = 32, 
+                  y2 = 35)
+
+model <- "~/Dropbox/stat577/homework/hw_code/example_3.1.3.txt"
+
+fit <- jags(jags_data, inits, params, model)
+
+```
+### Problem 2
+
+$$y_i \sim Poisson(\theta M_i)$$
+$$\theta \sim Gamma(\alpha, \beta)$$
+$$p(y | \theta) = \prod_{i = 1}^{n} \left[ \frac{\theta^{y_i}e^{-\theta M_i}}{y_i!}\right] = \frac{e^{-\theta \sum{M_i}}\theta^{\sum{y_i}}}{\prod{y_i!}}$$
+$$= \frac{\left[\frac{e^{-\theta \sum{M_i}}\theta^{\sum{y_i}}}{\prod{y_i!}}\right]\left[\frac{\beta^{\alpha}}{\Gamma(\alpha)}\theta^{\alpha-1}e^{-\beta\theta}\right]}{\int_0^\infty {\left[\frac{e^{-\theta \sum{M_i}}\theta^{\sum{y_i}}}{\prod{y_i!}}\right]\left[\frac{\beta^{\alpha}}{\Gamma(\alpha)}\theta^{\alpha-1}e^{-\beta\theta}\right]}d\theta}$$
+$$= \frac{\left[e^{-\theta \sum{M_i}}\theta^{\sum{y_i}}\right]\left[\theta^{\alpha-1}e^{-\beta\theta}\right]}{\int_0^\infty {\left[e^{-\theta \sum{M_i}}\theta^{\sum{y_i}}\right]\left[\theta^{\alpha-1}e^{-\beta\theta}\right]}d\theta}$$
+$$= \frac{e^{-\theta(\beta + \sum{M_i})}\theta^{(\alpha+\sum{y_i}) - 1}}{\int_0^\infty e^{-\theta(\beta + \sum{M_i})}\theta^{(\alpha+\sum{y_i}) - 1}d\theta}$$
+$$= \frac{e^{-\theta(\beta + \sum{M_i})}\theta^{(\alpha+\sum{y_i}) - 1}}{\frac{\Gamma(\alpha + \sum{y_i})}{(\beta + \sum{M_i})^{\alpha + \sum{y_i}}}\int_0^\infty \frac{(\beta + \sum{M_i})^{\alpha + \sum{y_i}}}{\Gamma(\alpha + \sum{y_i})}e^{-\theta(\beta + \sum{M_i})}\theta^{(\alpha+\sum{y_i}) - 1}d\theta}$$
+$$= \frac{(\beta + \sum{M_i})^{\alpha + \sum{y_i}}}{\Gamma(\alpha + \sum{y_i})}e^{-\theta(\beta + \sum{M_i})}\theta^{(\alpha+\sum{y_i}) - 1}$$
+$$\therefore p(\theta|y) \sim Gamma(\alpha + \sum{y_i}, \beta + \sum{M_i}) $$
+  
+  
+### Problem 3  
+
+$$y_i \sim Poisson(\theta_i M_i)$$
+$$\theta_i \sim Gamma(\alpha_i, \beta_i)$$
+$$p(\theta_1, \theta_2) = \left[\frac{\beta_1^{\alpha_1}}{\Gamma(\alpha_1)}\right]
+\theta_1^{y_1}
+e^{-\beta_1\theta_1}
+\left[\frac{\beta_2^{\alpha_2}}{\Gamma(\alpha_2)}\right]
+\theta_2^{y_2}
+e^{-\beta_2\theta_2} $$
+
+$$p(y_1, y_2|\theta_1, \theta_2) = 
+\frac{1}{y_1!}
+\theta_1^{y_1}
+e^{-\theta_1M_1}
+\frac{1}{y_2!}
+\theta_2^{y_2}
+e^{-\theta_2M_2}$$  
+
+
+$$p(\theta_1, \theta_2|y_1, y_2) = 
+\frac{
+\left[\frac{\beta_1^{\alpha_1}\beta_2^{\alpha_2}}{\Gamma(\alpha_1)\Gamma(\alpha_2)}\right]
+\left[\frac{1}{y_1!y_2!}\right]
+\theta_1^{\alpha_1 + y_1 - 1}
+e^{-\theta_1(\beta_1 + M_1)}
+\theta_2^{\alpha_2 + y_2 - 1}
+e^{-\theta_2(\beta_2 + M_2)}
+}
+{
+\left[\frac{\beta_1^{\alpha_1}\beta_2^{\alpha_2}}{\Gamma(\alpha_1)\Gamma(\alpha_2)}\right]
+\left[\frac{1}{y_1!y_2!}\right]
+\int_0^{\infty}
+\int_0^{\infty}
+\theta_1^{\alpha_1 + y_1 - 1}
+e^{-\theta_1(\beta_1 + M_1)}
+\theta_2^{\alpha_2 + y_2 - 1}
+e^{-\theta_2(\beta_2 + M_2)}
+d\theta_1 d\theta_2
+}$$
+
+$$= 
+\frac{
+\theta_1^{\alpha_1 + y_1 - 1}
+e^{-\theta_1(\beta_1 + M_1)}
+\theta_2^{\alpha_2 + y_2 - 1}
+e^{-\theta_2(\beta_2 + M_2)}
+}
+{
+\int_0^{\infty}
+\theta_1^{\alpha_1 + y_1 - 1}
+e^{-\theta_1(\beta_1 + M_1)}
+d\theta_1
+\int_0^{\infty}
+\theta_2^{\alpha_2 + y_2 - 1}
+e^{-\theta_2(\beta_2 + M_2)}
+d\theta_2
+}$$
+
+$$=\frac{
+\left[
+\theta_1^{\alpha_1 + y_1 - 1}
+e^{-\theta_1(\beta_1 + M_1)}
+\right]
+\left[
+\theta_2^{\alpha_2 + y_2 - 1}
+e^{-\theta_2(\beta_2 + M_2)}
+\right]}
+{\left[\frac{\Gamma(\alpha_1 + y_1)}{(\beta_1 + M_1)^{\alpha_1 + y_1}}\right]
+\left[
+\int_0^{\infty}
+\left(\frac{[\beta_1 + M_1]^{\alpha_1 + y_1}}{\Gamma[\alpha_1 + y_1]}\right)
+\theta_1^{\alpha_1 + y_1 - 1}
+e^{-\theta_1(\beta_1 + M_1)}
+d\theta_1
+\right]
+\left[\frac{\Gamma(\alpha_2 + y_2)}{(\beta_2 + M_2)^{\alpha_2 + y_2}}\right]
+\left[
+\int_0^{\infty}
+\left(\frac{[\beta_2 + M_2]^{\alpha_2 + y_2}}{\Gamma[\alpha_2 + y_2]}\right)
+\theta_2^{\alpha_2 + y_2 - 1}
+e^{-\theta_2(\beta_2 + M_2)}
+d\theta_2
+\right]}$$
+
+$$ = 
+\frac{
+\left[
+\theta_1^{\alpha_1 + y_1 - 1}
+e^{-\theta_1(\beta_1 + M_1)}
+\right]
+\left[
+\theta_2^{\alpha_2 + y_2 - 1}
+e^{-\theta_2(\beta_2 + M_2)}
+\right]
+}
+{
+\left[\frac{\Gamma(\alpha_1 + y_1)}{(\beta_1 + M_1)^{\alpha_1 + y_1}}\right]
+\left[\frac{\Gamma(\alpha_2 + y_2)}{(\beta_2 + M_2)^{\alpha_2 + y_2}}\right]
+}$$
+
+
+$$= 
+\left[\frac{(\beta_1 + M_1)^{\alpha_1 + y_1}}{\Gamma(\alpha_1 + y_1)}\right]
+\left[
+\theta_1^{\alpha_1 + y_1 - 1}
+e^{-\theta_1(\beta_1 + M_1)}
+\right]
+\left[\frac{(\beta_2 + M_2)^{\alpha_2 + y_2}}{\Gamma(\alpha_2 + y_2)}\right]
+\left[
+\theta_2^{\alpha_2 + y_2 - 1}
+e^{-\theta_2(\beta_2 + M_2)}
+\right]$$  
+
+$$\therefore 
+p(\theta_1, \theta_2|y_1, y_2) \sim 
+Gamma(\alpha_1 + y_1, \beta_1 + M_1) 
+\times
+Gamma(\alpha_2 + y_2, \beta_2 + M_2) $$
+
+$$\sim 
+Gamma(501, 100.1)
+\times
+Gamma(801, 200.1)$$  
+
+
+### Problem 4  
+
+```{r, eval=FALSE, error=TRUE}
+sink("~/Dropbox/stat577/homework/hw_code/problem4.txt")
+
+cat("
+model{
+    
+  for(i in 1:n) {
+  
+    # likelihoods
+    y[i] ~ dpois(t[i] * M[i])
+    
+    # priors
+    t[i] ~ dgamma(1, 0.1)
+    
+  }
+  
+}", fill=TRUE)
+
+sink()
+```
+
+```{r, message=FALSE, results=FALSE}
+params <- c("t")
+
+inits <- function() {
+  list(
+    t = rgamma(2, 1, 0.1)
+  )
+}
+
+jags_data <- list(y = c(500, 800), 
+                  M = c(100, 200),
+                  n = 2)
+
+model <- "~/Dropbox/stat577/homework/hw_code/problem4.txt"
+
+fit.4 <- jags(jags_data, inits, params, model,
+            n.iter=10000, n.burnin=1000)
+```
+
+```{r}
+
+apply(fit.4$BUGSoutput$sims.list$t, 2, mean)
+```
+
+The means of theoretical Gamma distributions with alphas and betas of 500 & 800 and 100 and 200, respectively, are $\frac{\alpha}{\beta} = \frac{501}{100.1}$ and $\frac{801}{200.1}$ = 5.005 and 4.002. The mean of posteriors from JAGS output are 5.007 ad 4.003, respectively. Very close. 
+
+### Problem 5
+
+##### With Jeffrey's Prior: Beta(0.5, 0.5)
+
+```{r, eval=FALSE, error=TRUE}
+sink("~/Dropbox/stat577/homework/hw_code/hw2_problem5.1.txt")
+
+cat("
+model{
+  
+    # likelihoods
+    y[1] ~ dbin(theta1, n[1])
+    y[2] ~ dbin(theta2, n[2])
+  
+    # priors
+    theta2 ~ dbeta(.5, .5)
+    delta ~ dnorm(0, .5)
+    
+    # derived quantities
+    theta1 <- exp(delta) * theta2 / (1 - theta2 * (1 - exp(delta)))
+    OR <- theta1 / (1 - theta1) / (theta2 / (1 - theta2))
+  
+  
+}", fill=TRUE)
+
+sink()
+```
+
+##### With Beta(1, 1) Prior 
+
+```{r, eval=FALSE, error=TRUE}
+sink("~/Dropbox/stat577/homework/hw_code/hw2_problem5.2.txt")
+
+cat("
+model{
+    
+
+  
+    # likelihoods
+    y[1] ~ dbin(theta1, n[1])
+    y[2] ~ dbin(theta2, n[2])
+  
+    # priors
+    theta2 ~ dbeta(1, 1)
+    delta ~ dnorm(0, .5)
+    
+    # derived quantities
+    theta1 <- exp(delta) * theta2 / (1 - theta2 * (1 - exp(delta)))
+    OR <- theta1 / (1 - theta1) / (theta2 / (1 - theta2))
+  
+  
+}", fill=TRUE)
+
+sink()
+```
+
+##### With Uniform(log(0.02), log(50))  Prior
+```{r, eval=FALSE, error=TRUE}
+sink("~/Dropbox/stat577/homework/hw_code/hw2_problem5.3.txt")
+
+cat("
+model{
+  
+    # likelihoods
+    y[1] ~ dbin(theta1, n[1])
+    y[2] ~ dbin(theta2, n[2])
+  
+    # priors
+    theta2 ~ dunif(log(.02), log(50))
+    delta ~ dnorm(0, .5)
+    
+    # derived quantities
+    theta1 <- exp(delta) * theta2 / (1 - theta2 * (1 - exp(delta)))
+    OR <- theta1 / (1 - theta1) / (theta2 / (1 - theta2))
+  
+  
+}", fill=TRUE)
+
+sink()
+```
+
+```{r, message=FALSE, results=FALSE}
+params <- c("theta1",
+            "theta2", 
+            "OR")
+
+inits <- function() {
+  list(
+    theta2 = rbeta(1, 1, 1),
+    delta = rnorm(1, 0, 2)
+  )
+}
+
+jags_data <- list(y = c(7, 8), 
+                  n = c(7, 16))
+
+model1 <- "~/Dropbox/stat577/homework/hw_code/hw2_problem5.1.txt"
+model2 <- "~/Dropbox/stat577/homework/hw_code/hw2_problem5.2.txt"
+model3 <- "~/Dropbox/stat577/homework/hw_code/hw2_problem5.3.txt"
+
+fit1 <- jags(jags_data, 
+            inits,
+            params, model1,
+            n.iter=10000, n.burnin=1000)
+
+fit2 <- jags(jags_data, 
+            inits,
+            params, model2,
+            n.iter=10000, n.burnin=1000)
+
+fit3 <- jags(jags_data, 
+            inits,
+            params, model3,
+            n.iter=10000, n.burnin=1000)
+
+```
+
+```{r, echo=FALSE}
+outmat <- matrix(
+  c(
+    mean(fit1$BUGSoutput$sims.list$OR > 1),
+    mean(fit2$BUGSoutput$sims.list$OR > 1),
+    mean(fit3$BUGSoutput$sims.list$OR > 1),
+    mean(fit1$BUGSoutput$sims.list$OR > 2),
+    mean(fit2$BUGSoutput$sims.list$OR > 2),
+    mean(fit3$BUGSoutput$sims.list$OR > 2)), 
+  nrow=3, dimnames=list(c("Jeffrey's", "Beta(1, 1)",
+                          "U(ln(0.02), ln(50))")))
+kable_styling(kable(round(outmat, 3) ,
+col.names = c("p(OR > 1)", "p(OR > 2)")))
+```
+
+
+The results are not particularly sensitive to these choices of prior. The probability that the odds ratio is greater than 1 is between 0.983 and 0.985, and the probability that the odds ratio is greater than 2 is between .89 and .91.
+
+
+

@@ -1,0 +1,19 @@
+
+model{
+    
+
+  
+    # likelihoods
+    y[1] ~ dbin(theta1, n[1])
+    y[2] ~ dbin(theta2, n[2])
+  
+    # priors
+    theta2 ~ dbeta(.5, .5)
+    delta ~ dnorm(0, .5)
+    
+    # derived quantities
+    theta1 <- exp(delta) * theta2 / (1 - theta2 * (1 - exp(delta)))
+    OR <- theta1 / (1 - theta1) / (theta2 / (1 - theta2))
+  
+  
+}

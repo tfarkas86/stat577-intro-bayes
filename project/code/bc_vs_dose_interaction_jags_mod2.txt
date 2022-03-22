@@ -1,0 +1,60 @@
+model{
+	for(i in 1:n){
+		bcarot[i] ~ dnorm( mu[i] , tau_bc )
+		mu[i] <- beta0 + 
+		         beta1 * dose[i] + 
+		         beta2 * age[i] + 
+		         beta3 * chol[i] +
+		         beta4 * bmi[i] + 
+		         beta5 * dose[i] * age[i] + 
+		         beta6 * dose[i] * chol[i] + 
+		         beta7 * dose[i] * bmi[i] + 
+		         beta8 * month[i] + 
+		         beta9 * month[i] * month[i] +
+		         gamma[ ptid[i] ]
+		         
+		err[i] <- bcarot[i] - mu[i]
+	}
+	
+	for(j in 1:n_patients){
+		gamma[j] ~ dnorm( 0, tau_g )
+	}
+
+		beta0 ~ dnorm( 0, tau_b0 )
+		beta1 ~ dnorm( 0, tau_b1 )
+		beta2 ~ dnorm( 0, tau_b2 )
+		beta3 ~ dnorm( 0, tau_b3 )
+		beta4 ~ dnorm( 0, tau_b4 )
+		beta5 ~ dnorm( 0, tau_b5 )
+		beta6 ~ dnorm( 0, tau_b6 )
+		beta7 ~ dnorm( 0, tau_b7 )
+		beta8 ~ dnorm( 0, tau_b8 )
+		beta9 ~ dnorm( 0, tau_b9 )
+		
+	tau_bc ~ dgamma(0.01, 0.01)
+	tau_g ~ dgamma(0.01, 0.01)
+	
+	tau_b0 ~ dgamma(0.01, 0.01)
+	tau_b1 ~ dgamma(0.01, 0.01)
+	tau_b2 ~ dgamma(0.01, 0.01)
+	tau_b3 ~ dgamma(0.01, 0.01)
+	tau_b4 ~ dgamma(0.01, 0.01)
+	tau_b5 ~ dgamma(0.01, 0.01)
+	tau_b6 ~ dgamma(0.01, 0.01)
+	tau_b7 ~ dgamma(0.01, 0.01)
+	tau_b8 ~ dgamma(0.01, 0.01)
+	tau_b9 ~ dgamma(0.01, 0.01)
+	
+	sigma_bc <- pow(tau_bc,-0.5)
+	sigma_g <- pow(tau_g,-0.5)
+	
+	beta0_orig <- beta0 * bc_sd 
+	beta1_orig <- 15 * beta1 * bc_sd / dose_sd
+	beta2_orig <- beta2 * bc_sd / age_sd
+	beta3_orig <- beta3 * bc_sd / chol_sd
+	beta4_orig <- beta4 * bc_sd / bmi_sd
+	beta5_orig <- 15 * beta5 * bc_sd / dose_sd / age_sd
+	beta6_orig <- 15 * beta6 * bc_sd / dose_sd / chol_sd
+	beta7_orig <- 15 * beta7 * bc_sd / dose_sd / bmi_sd
+	
+}

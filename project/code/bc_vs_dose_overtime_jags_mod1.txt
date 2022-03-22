@@ -1,0 +1,53 @@
+model{
+	for(i in 1:n){
+		bcarot[i] ~ dnorm( mu[i] , tau_bc )
+		mu[i] <- beta0 + 
+		         beta1 * dose[i] + 
+		         beta2 * month[i] + 
+		         beta3 * month[i] * month[i] +
+		        #beta4 * bmi[i] +
+		        #beta5 * dose[i] * month[i] * month[i] +
+		        #beta4 * month[i] * month[i] * month[i] +
+		         gamma[ ptid[i] ]
+		         
+		err[i] <- (bcarot[i] - mu[i]) 
+		         
+	}
+	
+	for(j in 1:n_patients){
+		gamma[j] ~ dnorm( 0, tau_g )
+	}
+
+		beta0 ~ dnorm( 0, tau_b0 )
+		beta1 ~ dnorm( 0, tau_b1 )
+		beta2 ~ dnorm( 0, tau_b2 )
+		beta3 ~ dnorm( 0, tau_b3 )
+	#	beta4 ~ dnorm( 0, tau_b4 )
+  #	beta5 ~ dnorm( 0, tau_b5 )
+	
+	tau_bc ~ dgamma(0.001, 0.001)
+	tau_g ~ dgamma(0.001, 0.001)
+	tau_b0 ~ dgamma(0.001, 0.001)
+	tau_b1 ~ dgamma(0.001, 0.001)
+	tau_b2 ~ dgamma(0.001, 0.001)
+	tau_b3 ~ dgamma(0.001, 0.001)
+ # tau_b4 ~ dgamma(0.001, 0.001)
+ # tau_b5 ~ dgamma(0.001, 0.001)
+	
+  sigma_bc <- pow(tau_bc, -0.5)
+	sigma_g <- pow(tau_g, -0.5)
+	sigma_0 <- pow(tau_b0, -0.5)
+	sigma_1 <- pow(tau_b1, -0.5)
+	sigma_2 <- pow(tau_b2, -0.5)
+	sigma_3 <- pow(tau_b3, -0.5)
+	
+	beta0_orig <- beta0 * bc_sd 
+	beta1_orig <- 15 * beta1 
+	beta2_orig <- beta2 * bc_sd
+	beta3_orig <- beta3 * bc_sd  
+#	beta4_orig <- 15 * beta4 * bc_sd  / dose_sd
+#	beta5_orig <- 15 * beta5 * bc_sd  / dose_sd
+	
+
+	
+}

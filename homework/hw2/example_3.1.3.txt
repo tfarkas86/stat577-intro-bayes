@@ -1,0 +1,12 @@
+
+model{
+      
+  # likelihood distributions
+  y1 ~ dbin(t1, 80)
+  y2 ~ dbin(t2, 100)
+  
+  # prior distributions
+  t1 ~ dbeta(1, 1)
+  t2 ~ dbeta(2, 1)
+  
+}

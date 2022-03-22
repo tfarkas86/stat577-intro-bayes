@@ -1,0 +1,165 @@
+---
+title: 'STAT 577: Homework 1'
+author: "Tim Farkas"
+date: "3/28/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Problem 1  
+
+[+ / -] = [positive / negative] test result
+[P / N] = [has / does not have] HIV
+
+$$P(+ | P) = 0.99 \therefore P(-|P) = 0.01$$
+$$P(-|N) = 0.995 \therefore P(-|P) = 0.005$$
+$$P(P) = 0.0001 \therefore P(N) = 0.9999$$  
+
+#### 1a)   
+
+$$P(+) = P(+|P)P(P) + P(+|N)P(N)$$
+$$= (0.99)(0.0001) + (0.005)(0.9999) = 0.0050985$$
+$$\therefore P(-) = 1 - (0.0050985) = 0.9949015$$
+
+#### 1b)  
+
+$$P(P|-) = \frac{P(-|P)P(P)}{P(-)}$$
+$$= \frac{(0.01)(0.0001)}{0.9949015} = 0.000001005$$
+
+#### 1c)  
+
+$$P(P|+) = \frac{P(+|P)P(P)}{P(+)} = \frac{(0.99)(0.00001)}{0.0050985} = 0.0194$$
+
+### Problem 2  
+
+$$P(E|J) = 0.75 \therefore P(E^C|J) = 0.25$$
+$$P(E) = 0.07 \therefore P(E^C) = 0.93$$
+
+#### 2a)  
+
+Let $P(J) = p$
+
+$$P(J|E) = \frac{P(E|J)P(J)}{P(E)} = \frac{0.75p}{0.07}$$
+$$P(J|E^C) = \frac{P(E^C|J)P(J)}{P(E^C)} = \frac{0.25p}{0.93}$$
+$$\frac{P(J|E)}{P(J|E^C)} = \frac{(0.75)(0.93)p}{(0.25)(0.07)p} = 39.88$$
+The probability of becoming a judge is about 40 times higher for students attending elite schools. 
+
+#### 2b)    
+
+Let $q = P(E)$.
+
+$$\frac{(0.75)(1-q)}{(0.25q)} = 1$$
+$$\rightarrow (0.75)(1-q) = 0.25q \rightarrow 0.75 - 0.75q = 0.25q$$
+$$\therefore q = 0.75$$
+If 75% of studens attended elite schools, the finding that 75% of judges attended elite schools would indicate no effect of school "eliteness" on the probability of becoming a judge. The rarer elite schooling is, the more extreme is this bias. 
+
+### Problem 3  
+
+For $\theta \sim Beta(a, b)$:
+
+$$p(\theta) = 
+\frac{\Gamma(a + b)}{\Gamma(a)\Gamma(b)}
+\theta^{a-1}(1-\theta)^{b-1}I_{(0,1)}(\theta)$$
+Log transform:
+$$log(p(\theta))=
+log\left[\frac{\Gamma(a + b)}{\Gamma(a)\Gamma(b)}\right]+
+(a-1)log(\theta) + (b-1)log(1-\theta)$$
+Take first derivative:
+$$\frac{d(log(p(\theta)}{d\theta} = 
+\frac{a-1}{\theta} + \frac{1 - b}{1 - \theta}$$
+
+Set to zero and solve for $\theta$ to find inflection point:
+
+$$0 = \frac{a-1}{\theta} + \frac{1 - b}{1 - \theta} \rightarrow$$
+$$\frac{b-1}{1-\theta} = \frac{a-1}{\theta} \rightarrow$$
+$$\theta(b-1) = (a-1)(1-\theta)$$
+$$b\theta-\theta=a-1-a\theta+\theta$$
+$$a\theta + b\theta -2\theta = a - 1$$
+$$\theta(a + b - 2) = a-1$$
+$$\therefore \theta = \frac{a-1}{a + b - 2}$$
+Find second derivative:
+
+$$\frac{d^2(log(p(\theta)))}{d\theta^2} = 
+\frac{1-a}{\theta^2} + \frac{1-b}{(1-\theta)^2}$$
+
+Hence solving for $\theta$ when a, b > 1 yields max and when a, b < 1 yields min.
+
+If $a < 1$ and $b > 1$, $\frac{a-1}{\theta} < 1$ and $\frac{1-b}{1-\theta} < 1$, so first derivative is negative, and $p(\theta)$ is decreasing on the interval (0, 1). Hence the mode is at 0. 
+
+If $a > 1$ and $b < 1$, $\frac{a-1}{\theta} > 1$ and $\frac{1-b}{1-\theta} > 1$, so first derivative is positive, and $p(\theta)$ is increasing on the interval (0, 1). Hence the mode is at 1. 
+
+If $a < 1$ and $b < 1$, $\frac{a-1}{\theta} < 1$ and $\frac{1-b}{1-\theta} > 1$, solving the first derivative for $\theta$ yields the minimum. When a = b, $\theta = 0.5$ and the probability distribution is bimodal, with $\theta = 0$ and $\theta =1$ having equal probability. If a > b, $\theta < 0.5$ and the mode is 1, whereas if a < b, $\theta > 0.5$ and the mode is 0.
+
+I don't think the above is correct. It would appear the densities at 0 and 1 are both infinity when a, b < 1.
+
+### Problem 4  
+
+4a) 
+
+$x = 1 \rightarrow \theta_1e^{-\theta_1y_i}$  
+$x = 0 \rightarrow \theta_2e^{-\theta_2y_i}$
+
+These are exponential: y ~ Exp($\theta_i$). 
+
+$x = 1 \rightarrow \frac{\theta_1^{y_i}e^{-\theta_1}}{y_i!}$  
+$x = 0 \rightarrow \frac{\theta_2^{y_i}e^{-\theta_2}}{y_i!}$
+
+These are Poisson distributions: y ~ Pois($\theta_i$). 
+
+$x = 1 \rightarrow 2\theta_1ye^{-\theta_1y_i^2}$  
+$x = 0 \rightarrow 2\theta_2ye^{-\theta_2y_i^2}$
+
+These are Weibull distributions: y ~ Weib(2, $\theta_i$)
+
+4b)
+
+$$f(y_1, y_2, ... y_n|\theta_1, \theta_2) = 
+\prod_{i=1}^k f(y_i|\theta_1)  
+\prod_{j=k+1}^n f(y_j|\theta_2)$$
+
+i)
+
+$$y_i \sim exp(\beta = \theta_j) \rightarrow f(y_i|\theta_j) = \theta_j e^{-\theta_j y_i}$$
+$$f(y_1, y_2, ... y_n|\theta_1, \theta_2) = \theta_1^ke^{-\theta_1\sum_{i=1}^ky_i}
+\theta_2^{n-k}e^{-\theta_2\sum_{j=k+1}^ny_j}$$  
+
+$$= \theta_1^k\theta_2^{n-k}e^{-\left[\theta_1\sum_{i=1}^ky_i+\theta_2\sum_{j=k+1}^ny_j\right]}$$  
+ii)  
+$$y \sim Pois(\lambda = \theta) \rightarrow 
+f(y_i|\theta_j)=
+\frac{\theta_j^{y_i}e^{-\theta_j}}{y_i!}$$
+
+$$f(y_1, y_2, ... y_n|\theta_1, \theta_2) =
+\prod_{i=1}^k\frac{\theta_1^{y_i}e^{-\theta_1}}{y_i!}
+\prod_{j=k+1}^n\frac{\theta_2^{y_j}e^{-\theta_2}}{y_j!}$$
+
+$$= \frac{\theta_1^{\sum_{i=1}^k y_i}e^{-k\theta_1}}{\prod_{i=1}^k y_i!}
+\frac{\theta_2^{\sum_{j=k+1}^n y_j}e^{-k\theta_2}}{\prod_{i=k+1}^n y_j!}$$
+
+iii)  
+
+$$y_i \sim Weibull(2, \theta_j) \rightarrow
+f(y_i|\theta_j) = 2\theta_jye^{-\theta_jy^2}$$
+
+$$f(y_1, y_2, ... y_n|\theta_1, \theta_2) =
+\prod_{i=1}^k2\theta_1y_ie^{-\theta_1y_i^2}
+\prod_{j=k+1}^n\theta_2y_je^{-\theta_2y_j^2}$$
+
+$$=2^n\theta_1^k\theta_2^{n-k}
+e^{-\left[\theta_1\sum_{i=1}^k y_i^2 + \theta_2\sum_{j=k+1}^n y_j^2 \right]}
+\prod_{i=1}^n y_i$$
+
+
+
+
+
+
+
+
+
+

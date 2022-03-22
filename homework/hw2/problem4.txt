@@ -1,0 +1,14 @@
+
+model{
+    
+  for(i in 1:n) {
+  
+    # likelihoods
+    y[i] ~ dpois(t[i] * M[i])
+    
+    # priors
+    t[i] ~ dgamma(1, 0.1)
+    
+  }
+  
+}
